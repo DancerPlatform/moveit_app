@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/supabase_service.dart';
+import '../../../providers/auth_provider.dart';
+import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -73,6 +77,142 @@ class _LoginSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
+    if (authProvider.isLoggedIn) {
+      return _LoggedInSection(userId: authProvider.userId!);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              // Avatar with dashed border
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.textSecondary.withValues(alpha: 0.5),
+                    width: 2,
+                    strokeAlign: BorderSide.strokeAlignInside,
+                  ),
+                ),
+                child: CustomPaint(
+                  painter: _DashedCirclePainter(
+                    color: AppColors.textSecondary.withValues(alpha: 0.5),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.person_outline,
+                      color: AppColors.textSecondary,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Login text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          AppStrings.pleaseLogin,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textSecondary.withValues(alpha: 0.7),
+                          size: 24,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      AppStrings.loginForMoreFeatures,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoggedInSection extends StatefulWidget {
+  final String userId;
+
+  const _LoggedInSection({required this.userId});
+
+  @override
+  State<_LoggedInSection> createState() => _LoggedInSectionState();
+}
+
+class _LoggedInSectionState extends State<_LoggedInSection> {
+  String? _userName;
+  String? _profileImageUrl;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final response = await SupabaseService.client
+          .from('users')
+          .select('name, nickname, profile_image')
+          .eq('id', widget.userId)
+          .maybeSingle();
+
+      if (response != null && mounted) {
+        setState(() {
+          _userName = response['name'] + "님,";
+          _profileImageUrl = response['profile_image'];
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
@@ -83,61 +223,75 @@ class _LoginSection extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar with dashed border
+            // Avatar
             Container(
               width: 64,
               height: 64,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.textSecondary.withValues(alpha: 0.5),
-                  width: 2,
-                  strokeAlign: BorderSide.strokeAlignInside,
-                ),
+                color: AppColors.primary,
+                image: _profileImageUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(_profileImageUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: CustomPaint(
-                painter: _DashedCirclePainter(
-                  color: AppColors.textSecondary.withValues(alpha: 0.5),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    color: AppColors.textSecondary,
-                    size: 32,
-                  ),
-                ),
-              ),
+              child: _profileImageUrl == null
+                  ? const Center(
+                      child: Icon(
+                        Icons.person,
+                        color: AppColors.textPrimary,
+                        size: 32,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 16),
-            // Login text
+            // User info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        AppStrings.pleaseLogin,
+                  _isLoading
+                      ? Container(
+                          width: 100,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        )
+                      : Text(
+                          _userName ?? context.read<AuthProvider>().userEmail ?? '',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      context.read<AuthProvider>().signOut();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '로그아웃',
                         style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.chevron_right,
-                        color: AppColors.textSecondary.withValues(alpha: 0.7),
-                        size: 24,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    AppStrings.loginForMoreFeatures,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
                     ),
                   ),
                 ],

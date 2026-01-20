@@ -16,7 +16,8 @@ class StudiosScreen extends StatefulWidget {
   State<StudiosScreen> createState() => _StudiosScreenState();
 }
 
-class _StudiosScreenState extends State<StudiosScreen> {
+class _StudiosScreenState extends State<StudiosScreen>
+    with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final AcademyRepository _academyRepository = AcademyRepository();
 
@@ -28,10 +29,26 @@ class _StudiosScreenState extends State<StudiosScreen> {
   String? _errorMessage;
   List<Academy> _academies = [];
 
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchAcademiesInBounds() async {
@@ -74,10 +91,16 @@ class _StudiosScreenState extends State<StudiosScreen> {
       point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
       width: 40,
       height: 40,
-      child: const Icon(
-        Icons.my_location,
-        color: Colors.blue,
-        size: 40,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) => Opacity(
+          opacity: _pulseAnimation.value,
+          child: const Icon(
+            Icons.my_location,
+            color: Colors.blue,
+            size: 40,
+          ),
+        ),
       ),
     );
   }
