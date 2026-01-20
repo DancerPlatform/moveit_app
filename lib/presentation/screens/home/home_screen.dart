@@ -29,8 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: SearchBarWidget(),
               ),
               SizedBox(height: 16),
+              // 히어로 배너
               PromoBanner(),
               SizedBox(height: 24),
+              // 카테고리
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: QuickActions(),
