@@ -41,14 +41,21 @@ class AcademyRepository {
   }
 
   /// Search academies by name (Korean or English)
-  Future<List<Academy>> searchAcademies(String query) async {
+  Future<List<Academy>> searchAcademies(
+    String query, {
+    int? limit,
+    int? offset,
+  }) async {
+    final effectiveLimit = limit ?? 20;
+    final effectiveOffset = offset ?? 0;
+
     final response = await SupabaseService.client
         .from(_tableName)
         .select()
         .eq('is_active', true)
         .or('name_kr.ilike.%$query%,name_en.ilike.%$query%')
         .order('name_kr', ascending: true)
-        .limit(20);
+        .range(effectiveOffset, effectiveOffset + effectiveLimit - 1);
 
     return (response as List<dynamic>)
         .map((json) => Academy.fromJson(json as Map<String, dynamic>))
@@ -83,13 +90,21 @@ class AcademyRepository {
   }
 
   /// Fetch academies by tag
-  Future<List<Academy>> getAcademiesByTag(String tag) async {
+  Future<List<Academy>> getAcademiesByTag(
+    String tag, {
+    int? limit,
+    int? offset,
+  }) async {
+    final effectiveLimit = limit ?? 20;
+    final effectiveOffset = offset ?? 0;
+
     final response = await SupabaseService.client
         .from(_tableName)
         .select()
         .eq('is_active', true)
         .ilike('tags', '%$tag%')
-        .order('name_kr', ascending: true);
+        .order('name_kr', ascending: true)
+        .range(effectiveOffset, effectiveOffset + effectiveLimit - 1);
 
     return (response as List<dynamic>)
         .map((json) => Academy.fromJson(json as Map<String, dynamic>))

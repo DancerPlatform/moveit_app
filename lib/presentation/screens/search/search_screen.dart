@@ -19,12 +19,17 @@ class _SearchScreenState extends State<SearchScreen> {
   final AcademyRepository _repository = AcademyRepository();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
   List<Academy> _results = [];
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   String? _errorMessage;
   String _selectedCategory = AppStrings.categoryAll;
   Timer? _debounceTimer;
+
+  static const int _pageSize = 20;
 
   final List<String> _categories = [
     AppStrings.categoryAll,
@@ -41,6 +46,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _scrollController.addListener(_onScroll);
     // Load initial data and auto-focus the search field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
@@ -48,9 +54,18 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -70,35 +85,17 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _hasMore = true;
     });
 
     try {
-      List<Academy> results;
-
-      if (query.isNotEmpty) {
-        // Search by query
-        results = await _repository.searchAcademies(query);
-
-        // Filter by category if selected
-        if (_selectedCategory != AppStrings.categoryAll) {
-          results = results.where((academy) {
-            return academy.tagList.any((tag) =>
-                tag.toLowerCase().contains(_selectedCategory.toLowerCase()));
-          }).toList();
-        }
-      } else {
-        // No text query - filter by category or show all
-        if (_selectedCategory == AppStrings.categoryAll) {
-          results = await _repository.getAcademies(limit: 20);
-        } else {
-          results = await _repository.getAcademiesByTag(_selectedCategory);
-        }
-      }
+      final results = await _fetchResults(query, offset: 0);
 
       if (mounted) {
         setState(() {
           _results = results;
           _isLoading = false;
+          _hasMore = results.length >= _pageSize;
         });
       }
     } catch (e) {
@@ -109,6 +106,70 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       }
     }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final query = _searchController.text.trim();
+      final newResults = await _fetchResults(query, offset: _results.length);
+
+      if (mounted) {
+        setState(() {
+          _results.addAll(newResults);
+          _isLoadingMore = false;
+          _hasMore = newResults.length >= _pageSize;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  Future<List<Academy>> _fetchResults(String query, {required int offset}) async {
+    List<Academy> results;
+
+    if (query.isNotEmpty) {
+      // Search by query
+      results = await _repository.searchAcademies(
+        query,
+        limit: _pageSize,
+        offset: offset,
+      );
+
+      // Filter by category if selected
+      if (_selectedCategory != AppStrings.categoryAll) {
+        results = results.where((academy) {
+          return academy.tagList.any((tag) =>
+              tag.toLowerCase().contains(_selectedCategory.toLowerCase()));
+        }).toList();
+      }
+    } else {
+      // No text query - filter by category or show all
+      if (_selectedCategory == AppStrings.categoryAll) {
+        results = await _repository.getAcademies(
+          limit: _pageSize,
+          offset: offset,
+        );
+      } else {
+        results = await _repository.getAcademiesByTag(
+          _selectedCategory,
+          limit: _pageSize,
+          offset: offset,
+        );
+      }
+    }
+
+    return results;
   }
 
   void _onCategorySelected(String category) {
@@ -327,10 +388,23 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildResultsList() {
     return ListView.separated(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: _results.length,
+      itemCount: _results.length + (_isLoadingMore ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
+        if (index == _results.length) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        }
+
         final academy = _results[index];
         return AcademyCard(
           academy: academy,

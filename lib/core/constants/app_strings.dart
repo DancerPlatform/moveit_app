@@ -31,7 +31,7 @@ class AppStrings {
   static const String categoryStreet = '스트릿';
 
   // Feature Cards
-  static const String nearbyStudios = '내 주변 댄스학원';
+  static const String nearbyStudios = '내 주변 학원';
   static const String lowestPriceDiscount = '최저가 할인';
   static const String findOnMap = '지도에서 찾기';
   static const String findDancers = '댄서 찾기';
@@ -42,7 +42,7 @@ class AppStrings {
   static const String interestFreeInstallment = '무이자 할부';
 
   // Sections
-  static const String nearbyFacilities = '내 주변 댄스시설';
+  static const String nearbyFacilities = '내 주변 댄스 학원';
 
   // Bottom Navigation
   static const String home = '홈';
@@ -61,4 +61,35 @@ class AppStrings {
   static const String discount = '할인';
   static const String won = '원';
   static const String perMonth = '/월';
+
+  // Profile Screen
+  static const String pleaseLogin = '로그인하세요';
+  static const String loginForMoreFeatures = '로그인하여 더 많은 기능을 이용하세요';
+  static const String scheduledClasses = '수강 예정';
+  static const String pastClasses = '지난 클래스';
+  static const String ownedPasses = '보유 수강권';
+  static const String classUnit = '클래스';
+  static const String countUnit = '개';
+  static const String timesUnit = '회';
+  static const String ownedPassesCoupons = '보유 수강권/쿠폰';
+  static const String passes = '수강권';
+  static const String coupons = '쿠폰';
+  static const String passInfoText = '수강권은 기간 내 정규수업을 수강할 수 있는 권한입니다.';
+  static const String fullUse = '전체 이용';
+  static const String tenTimesPass = '10회권';
+  static const String daysRemaining = '일 남음';
+  static const String rechargePasses = '수강권 충전';
+  static const String currentOwned = '현재 보유';
+  static const String checkInWithQR = 'QR코드로 출석하기';
+  static const String inviteFriends = '친구 초대하기';
+  static const String referAndGetPoints = '추천하고 포인트 받기';
+  static const String paymentHistory = '결제내역';
+  static const String consultationChat = '상담톡';
+  static const String reviewManagement = '후기관리';
+  static const String facilityRegistration = '시설등록요청';
+  static const String friendInvite = '친구초대';
+  static const String get5000Points = '5,000P 받기';
+  static const String oneOnOneInquiry = '1:1 문의';
+  static const String faq = 'FAQ';
+  static const String noticesEvents = '공지/이벤트';
 }
