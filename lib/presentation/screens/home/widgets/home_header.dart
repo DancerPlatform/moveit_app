@@ -59,16 +59,6 @@ class HomeHeader extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          // Cart icon
-          IconButton(
-            onPressed: () {
-              // TODO: Open cart
-            },
-            icon: const Icon(
-              Icons.shopping_cart_outlined,
-              color: AppColors.textPrimary,
-            ),
-          ),
         ],
       ),
     );

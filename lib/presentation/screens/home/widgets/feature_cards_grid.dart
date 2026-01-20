@@ -1,8 +1,8 @@
-import 'package:dancer_app/presentation/screens/studios/studios_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../main/main_screen.dart';
 
 class FeatureCardsGrid extends StatelessWidget {
   const FeatureCardsGrid({super.key});
@@ -26,9 +26,7 @@ class FeatureCardsGrid extends StatelessWidget {
                 icon: Icons.location_on,
                 onTap: () {
                   // 지도로 이동
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const StudiosScreen()),
-                  );
+                  MainScreen.navigateToTab(context, 1);
                 },
               ),
             ),
@@ -44,9 +42,7 @@ class FeatureCardsGrid extends StatelessWidget {
                     icon: Icons.map_outlined,
                     onTap: () {
                       // 지도로 이동
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const StudiosScreen()),
-                      );
+                      MainScreen.navigateToTab(context, 1);
                     },
                   ),
                   const SizedBox(height: 12),
@@ -57,9 +53,7 @@ class FeatureCardsGrid extends StatelessWidget {
                     icon: Icons.search,
                     onTap: () {
                       // 댄서 화면으로 이동
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const StudiosScreen()),
-                      );
+                      MainScreen.navigateToTab(context, 2);
                     },
                   ),
                 ],

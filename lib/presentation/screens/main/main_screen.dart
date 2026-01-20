@@ -11,12 +11,24 @@ import '../profile/profile_screen.dart';
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
+  /// Navigate to a specific tab from anywhere in the app
+  static void navigateToTab(BuildContext context, int index) {
+    final state = context.findAncestorStateOfType<_MainScreenState>();
+    state?._setTab(index);
+  }
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+
+  void _setTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   // Navigator keys for each tab to maintain separate navigation stacks
   final List<GlobalKey<NavigatorState>> _navigatorKeys = [

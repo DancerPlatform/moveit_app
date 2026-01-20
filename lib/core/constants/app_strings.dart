@@ -3,7 +3,7 @@ class AppStrings {
   AppStrings._();
 
   // App
-  static const String appName = '댄스학원';
+  static const String appName = 'Move.it';
   static const String defaultLocation = '마포구 합정동';
 
   // Search
@@ -12,6 +12,17 @@ class AppStrings {
   // Quick Actions
   static const String trialClass = '체험 수업';
   static const String oneDayClass = '원데이 클래스';
+
+  // Categories
+  static const String categories = '카테고리';
+  static const String categoryAll = '전체';
+  static const String categoryKpop = 'K-POP';
+  static const String categoryHiphop = '힙합';
+  static const String categoryJazz = '재즈';
+  static const String categoryBallet = '발레';
+  static const String categoryContemporary = '현대무용';
+  static const String categoryLatin = '라틴';
+  static const String categoryStreet = '스트릿';
 
   // Feature Cards
   static const String nearbyStudios = '내 주변 댄스학원';

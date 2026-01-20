@@ -6,47 +6,55 @@ import '../../../../core/constants/app_strings.dart';
 class QuickActions extends StatelessWidget {
   const QuickActions({super.key});
 
+  static const List<_CategoryItem> _categories = [
+    _CategoryItem(label: AppStrings.categoryAll, icon: Icons.apps),
+    _CategoryItem(label: AppStrings.categoryKpop, icon: Icons.music_note),
+    _CategoryItem(label: AppStrings.categoryHiphop, icon: Icons.headphones),
+    _CategoryItem(label: AppStrings.categoryJazz, icon: Icons.piano),
+    _CategoryItem(label: AppStrings.categoryBallet, icon: Icons.sports_gymnastics),
+    _CategoryItem(label: AppStrings.categoryContemporary, icon: Icons.self_improvement),
+    _CategoryItem(label: AppStrings.categoryLatin, icon: Icons.favorite),
+    _CategoryItem(label: AppStrings.categoryStreet, icon: Icons.skateboarding),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _QuickActionButton(
-          icon: Icons.percent,
-          label: AppStrings.trialClass,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-          iconColor: AppColors.primary,
-          onTap: () {
-            // TODO: Navigate to trial class
-          },
-        ),
-        const SizedBox(width: 16),
-        _QuickActionButton(
-          icon: Icons.calendar_today,
-          label: AppStrings.oneDayClass,
-          backgroundColor: AppColors.success.withValues(alpha: 0.15),
-          iconColor: AppColors.success,
-          onTap: () {
-            // TODO: Navigate to one day class
-          },
-        ),
-      ],
+    return SizedBox(
+      height: 90,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _categories.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 16),
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          return _CategoryButton(
+            icon: category.icon,
+            label: category.label,
+            onTap: () {
+              // TODO: Navigate to category
+            },
+          );
+        },
+      ),
     );
   }
 }
 
-class _QuickActionButton extends StatelessWidget {
+class _CategoryItem {
+  final String label;
+  final IconData icon;
+
+  const _CategoryItem({required this.label, required this.icon});
+}
+
+class _CategoryButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color backgroundColor;
-  final Color iconColor;
   final VoidCallback onTap;
 
-  const _QuickActionButton({
+  const _CategoryButton({
     required this.icon,
     required this.label,
-    required this.backgroundColor,
-    required this.iconColor,
     required this.onTap,
   });
 
@@ -55,17 +63,18 @@ class _QuickActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: backgroundColor,
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               icon,
-              color: iconColor,
+              color: AppColors.primary,
               size: 28,
             ),
           ),
