@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -68,26 +69,22 @@ class _StudiosScreenState extends State<StudiosScreen> {
     }
   }
 
-  List<Marker> get _markers {
+  Marker? get _currentLocationMarker {
+    if (_currentPosition == null) return null;
+    return Marker(
+      point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+      width: 40,
+      height: 40,
+      child: const Icon(
+        Icons.my_location,
+        color: Colors.blue,
+        size: 40,
+      ),
+    );
+  }
+
+  List<Marker> get _academyMarkers {
     final markers = <Marker>[];
-
-    // Add current location marker
-    if (_currentPosition != null) {
-      markers.add(
-        Marker(
-          point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          width: 40,
-          height: 40,
-          child: const Icon(
-            Icons.my_location,
-            color: Colors.blue,
-            size: 40,
-          ),
-        ),
-      );
-    }
-
-    // Add academy markers
     for (final academy in _academies) {
       if (academy.location != null && academy.location!.isValid) {
         markers.add(
@@ -110,8 +107,79 @@ class _StudiosScreenState extends State<StudiosScreen> {
         );
       }
     }
-
     return markers;
+  }
+
+  Academy? _getAcademyForMarker(Marker marker) {
+    for (final academy in _academies) {
+      if (academy.location != null &&
+          academy.location!.latitude == marker.point.latitude &&
+          academy.location!.longitude == marker.point.longitude) {
+        return academy;
+      }
+    }
+    return null;
+  }
+
+  List<Academy> _getAcademiesForMarkers(List<Marker> markers) {
+    final academies = <Academy>[];
+    for (final marker in markers) {
+      final academy = _getAcademyForMarker(marker);
+      if (academy != null) {
+        academies.add(academy);
+      }
+    }
+    return academies;
+  }
+
+  void _showClusterAcademies(List<Marker> markers) {
+    final academies = _getAcademiesForMarkers(markers);
+    if (academies.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.4,
+        minChildSize: 0.2,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '${academies.length}개의 학원',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: academies.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => AcademyCard(
+                  academy: academies[index],
+                  variant: AcademyCardVariant.listTile,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showAcademyInfo(academies[index]);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showAcademyInfo(Academy academy) {
@@ -198,18 +266,41 @@ class _StudiosScreenState extends State<StudiosScreen> {
     }
   }
 
+  Widget _buildMapControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String tooltip,
+    bool isPrimary = false,
+  }) {
+    return Material(
+      elevation: 4,
+      shape: const CircleBorder(),
+      color: isPrimary ? AppColors.primary : Colors.white,
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: Tooltip(
+          message: tooltip,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(shape: BoxShape.circle),
+            child: Icon(
+              icon,
+              color: isPrimary ? Colors.white : AppColors.textPrimary,
+              size: 22,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.danceStudios),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.my_location),
-            onPressed: _getCurrentLocation,
-            tooltip: '현재 위치로 이동',
-          ),
-        ],
       ),
       body: Stack(
         children: [
@@ -222,11 +313,85 @@ class _StudiosScreenState extends State<StudiosScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.dancer_app',
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
               ),
-              MarkerLayer(markers: _markers),
+              MarkerClusterLayerWidget(
+                options: MarkerClusterLayerOptions(
+                  maxClusterRadius: 80,
+                  disableClusteringAtZoom: 18,
+                  size: const Size(50, 50),
+                  markers: _academyMarkers,
+                  builder: (context, markers) => GestureDetector(
+                    onTap: () => _showClusterAcademies(markers),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${markers.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_currentLocationMarker != null)
+                MarkerLayer(markers: [_currentLocationMarker!]),
             ],
+          ),
+          // Map controls
+          Positioned(
+            right: 16,
+            bottom: 100,
+            child: Column(
+              children: [
+                _buildMapControlButton(
+                  icon: Icons.add,
+                  onPressed: () {
+                    final currentZoom = _mapController.camera.zoom;
+                    _mapController.move(
+                      _mapController.camera.center,
+                      currentZoom + 1,
+                    );
+                  },
+                  tooltip: '확대',
+                ),
+                const SizedBox(height: 8),
+                _buildMapControlButton(
+                  icon: Icons.remove,
+                  onPressed: () {
+                    final currentZoom = _mapController.camera.zoom;
+                    _mapController.move(
+                      _mapController.camera.center,
+                      currentZoom - 1,
+                    );
+                  },
+                  tooltip: '축소',
+                ),
+                const SizedBox(height: 16),
+                _buildMapControlButton(
+                  icon: Icons.my_location,
+                  onPressed: _getCurrentLocation,
+                  tooltip: '현재 위치로 이동',
+                  isPrimary: true,
+                ),
+              ],
+            ),
           ),
           if (_isLoading)
             const Center(
