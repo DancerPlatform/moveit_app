@@ -230,7 +230,7 @@ class AcademyRepository {
     });
   }
 
-  /// Fetch classes for a specific academy
+  /// Fetch classes for a specific academy with instructor info
   Future<List<DanceClass>> getClassesByAcademyId(
     String academyId, {
     bool activeOnly = true,
@@ -238,7 +238,7 @@ class AcademyRepository {
   }) async {
     var query = SupabaseService.client
         .from(_classesTable)
-        .select()
+        .select('*, instructors(*)')
         .eq('academy_id', academyId);
 
     if (activeOnly) {

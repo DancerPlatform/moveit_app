@@ -1,3 +1,5 @@
+import 'instructor.dart';
+
 /// DanceClass model matching the Supabase 'classes' table schema.
 class DanceClass {
   final String id;
@@ -22,6 +24,7 @@ class DanceClass {
   final String? videoUrl;
   final int presentStudents;
   final bool isActive;
+  final Instructor? instructor;
 
   const DanceClass({
     required this.id,
@@ -46,6 +49,7 @@ class DanceClass {
     this.videoUrl,
     this.presentStudents = 0,
     this.isActive = true,
+    this.instructor,
   });
 
   /// Returns the display title (title preferred, falls back to song)
@@ -53,6 +57,11 @@ class DanceClass {
 
   /// Factory constructor to create DanceClass from Supabase JSON response
   factory DanceClass.fromJson(Map<String, dynamic> json) {
+    Instructor? instructor;
+    if (json['instructors'] != null) {
+      instructor = Instructor.fromJson(json['instructors'] as Map<String, dynamic>);
+    }
+
     return DanceClass(
       id: json['id'] as String,
       academyId: json['academy_id'] as String,
@@ -82,6 +91,7 @@ class DanceClass {
       videoUrl: json['video_url'] as String?,
       presentStudents: json['present_students'] as int? ?? 0,
       isActive: json['is_active'] as bool? ?? true,
+      instructor: instructor,
     );
   }
 
@@ -135,6 +145,7 @@ class DanceClass {
     String? videoUrl,
     int? presentStudents,
     bool? isActive,
+    Instructor? instructor,
   }) {
     return DanceClass(
       id: id ?? this.id,
@@ -159,6 +170,7 @@ class DanceClass {
       videoUrl: videoUrl ?? this.videoUrl,
       presentStudents: presentStudents ?? this.presentStudents,
       isActive: isActive ?? this.isActive,
+      instructor: instructor ?? this.instructor,
     );
   }
 }

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../data/models/user_coupon.dart';
+import '../../../data/models/user_ticket.dart';
 import '../../../providers/auth_provider.dart';
 import '../auth/login_screen.dart';
+import 'favorites_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -42,25 +46,26 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 16),
               // Login Section
               const _LoginSection(),
-              const SizedBox(height: 20),
+              // const SizedBox(height: 20),
               // Stats Row
-              const _StatsRow(),
+              // const _StatsRow(),
               const SizedBox(height: 24),
+              const _QuickActionButtons(),
+              const SizedBox(height: 16),
               // Passes/Coupons Section
               _PassesCouponsSection(tabController: _tabController),
               const SizedBox(height: 16),
               // Recharge Banner
-              const _RechargeBanner(),
-              const SizedBox(height: 12),
+              // const _RechargeBanner(),
+              // const SizedBox(height: 12),
               // QR Check-in Card
-              const _QRCheckInCard(),
-              const SizedBox(height: 12),
+              // const _QRCheckInCard(),
+              // const SizedBox(height: 12),
               // Friend Invite Card
-              const _FriendInviteCard(),
+              // const _FriendInviteCard(),
               const SizedBox(height: 20),
               // Quick Action Buttons
-              const _QuickActionButtons(),
-              const SizedBox(height: 16),
+
               // Menu Items
               const _MenuItems(),
               const SizedBox(height: 24),
@@ -434,13 +439,74 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _PassesCouponsSection extends StatelessWidget {
+class _PassesCouponsSection extends StatefulWidget {
   final TabController tabController;
 
   const _PassesCouponsSection({required this.tabController});
 
   @override
+  State<_PassesCouponsSection> createState() => _PassesCouponsSectionState();
+}
+
+class _PassesCouponsSectionState extends State<_PassesCouponsSection> {
+  List<UserTicket> _userTickets = [];
+  List<UserCoupon> _userCoupons = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    final authProvider = context.read<AuthProvider>();
+    if (!authProvider.isLoggedIn) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final userId = authProvider.userId;
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final ticketsResponse = await SupabaseService.client
+          .from('user_tickets')
+          .select('*, tickets(*)')
+          .eq('user_id', userId)
+          .eq('status', 'ACTIVE');
+
+      final couponsResponse = await SupabaseService.client
+          .from('user_coupons')
+          .select('*, coupons(*)')
+          .eq('user_id', userId)
+          .eq('is_used', false);
+
+      if (mounted) {
+        setState(() {
+          _userTickets = (ticketsResponse as List)
+              .map((e) => UserTicket.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _userCoupons = (couponsResponse as List)
+              .map((e) => UserCoupon.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -462,7 +528,7 @@ class _PassesCouponsSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: TabBar(
-              controller: tabController,
+              controller: widget.tabController,
               indicator: BoxDecoration(
                 color: AppColors.textPrimary,
                 borderRadius: BorderRadius.circular(12),
@@ -482,7 +548,7 @@ class _PassesCouponsSection extends StatelessWidget {
                     children: [
                       const Icon(Icons.confirmation_number_outlined, size: 18),
                       const SizedBox(width: 6),
-                      Text('${AppStrings.passes} (1)'),
+                      Text('${AppStrings.passes} (${_userTickets.length})'),
                     ],
                   ),
                 ),
@@ -492,7 +558,7 @@ class _PassesCouponsSection extends StatelessWidget {
                     children: [
                       const Icon(Icons.card_giftcard_outlined, size: 18),
                       const SizedBox(width: 6),
-                      Text('${AppStrings.coupons} (0)'),
+                      Text('${AppStrings.coupons} (${_userCoupons.length})'),
                     ],
                   ),
                 ),
@@ -500,48 +566,93 @@ class _PassesCouponsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Info Text
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Text(
-                  '💡',
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    AppStrings.passInfoText,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          // Content based on tab
+          AnimatedBuilder(
+            animation: widget.tabController,
+            builder: (context, child) {
+              return _buildContent(authProvider.isLoggedIn);
+            },
           ),
-          const SizedBox(height: 12),
-          // Pass Card
-          const _PassCard(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContent(bool isLoggedIn) {
+    if (!isLoggedIn) {
+      return _buildEmptyState('로그인 후 이용해주세요');
+    }
+
+    if (_isLoading) {
+      return const SizedBox(
+        height: 100,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    final isPassesTab = widget.tabController.index == 0;
+
+    if (isPassesTab) {
+      if (_userTickets.isEmpty) {
+        return _buildEmptyState('보유한 수강권이 없습니다');
+      }
+      return Column(
+        children: _userTickets.map((ut) => _PassCard(userTicket: ut)).toList(),
+      );
+    } else {
+      if (_userCoupons.isEmpty) {
+        return _buildEmptyState('보유한 쿠폰이 없습니다');
+      }
+      return Column(
+        children: _userCoupons.map((uc) => _CouponCard(userCoupon: uc)).toList(),
+      );
+    }
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          message,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _PassCard extends StatelessWidget {
-  const _PassCard();
+  final UserTicket userTicket;
+
+  const _PassCard({required this.userTicket});
 
   @override
   Widget build(BuildContext context) {
+    final ticket = userTicket.ticket;
+    final ticketName = ticket?.name ?? '수강권';
+    final daysRemaining = userTicket.daysRemaining;
+    final remainingCount = userTicket.remainingCount;
+
+    final dateFormat = DateFormat('yyyy년 M월 d일');
+    final startDateStr = userTicket.startDate != null
+        ? dateFormat.format(userTicket.startDate!)
+        : '-';
+    final expiryDateStr = userTicket.expiryDate != null
+        ? dateFormat.format(userTicket.expiryDate!)
+        : '-';
+
     return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceLight,
@@ -550,15 +661,6 @@ class _PassCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            AppStrings.fullUse,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
               const Icon(
@@ -567,24 +669,31 @@ class _PassCard extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Text(
-                AppStrings.tenTimesPass,
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  ticketName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD4E157),
+                  color: daysRemaining > 7
+                      ? const Color(0xFFD4E157)
+                      : daysRemaining > 0
+                          ? Colors.orange
+                          : Colors.red,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  '14${AppStrings.daysRemaining}',
-                  style: TextStyle(
+                child: Text(
+                  '$daysRemaining${AppStrings.daysRemaining}',
+                  style: const TextStyle(
                     color: Colors.black,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -593,7 +702,25 @@ class _PassCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Icons.local_activity_outlined,
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '남은 횟수: $remainingCount회',
+                style: TextStyle(
+                  color: AppColors.textSecondary.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
           Row(
             children: [
               Icon(
@@ -603,7 +730,109 @@ class _PassCard extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                '2026년 1월 4일 ~ 2026년 2월 3일',
+                '$startDateStr ~ $expiryDateStr',
+                style: TextStyle(
+                  color: AppColors.textSecondary.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CouponCard extends StatelessWidget {
+  final UserCoupon userCoupon;
+
+  const _CouponCard({required this.userCoupon});
+
+  @override
+  Widget build(BuildContext context) {
+    final coupon = userCoupon.coupon;
+    final couponName = coupon?.name ?? '쿠폰';
+    final discountDisplay = coupon?.discountDisplay ?? '';
+    final daysRemaining = coupon?.daysRemaining;
+
+    final dateFormat = DateFormat('yyyy년 M월 d일');
+    final validUntilStr = coupon?.validUntil != null
+        ? dateFormat.format(coupon!.validUntil!)
+        : '-';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.card_giftcard_outlined,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  couponName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  discountDisplay,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (coupon?.description != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              coupon!.description!,
+              style: TextStyle(
+                color: AppColors.textSecondary.withValues(alpha: 0.8),
+                fontSize: 13,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                Icons.schedule_outlined,
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                daysRemaining != null
+                    ? '유효기간: $validUntilStr ($daysRemaining일 남음)'
+                    : '유효기간: 무제한',
                 style: TextStyle(
                   color: AppColors.textSecondary.withValues(alpha: 0.8),
                   fontSize: 13,
@@ -812,9 +1041,13 @@ class _QuickActionButtons extends StatelessWidget {
         children: [
           Expanded(
             child: _QuickActionButton(
-              icon: Icons.person_outline,
-              label: AppStrings.passes,
-              onTap: () {},
+              icon: Icons.favorite_outline,
+              label: '찜 목록',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+                );
+              },
             ),
           ),
           const SizedBox(width: 12),
@@ -905,15 +1138,15 @@ class _MenuItems extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          _MenuItem(
-            title: AppStrings.facilityRegistration,
-            onTap: () {},
-          ),
-          _MenuItem(
-            title: AppStrings.friendInvite,
-            badge: AppStrings.get5000Points,
-            onTap: () {},
-          ),
+          // _MenuItem(
+          //   title: AppStrings.facilityRegistration,
+          //   onTap: () {},
+          // ),
+          // _MenuItem(
+          //   title: AppStrings.friendInvite,
+          //   badge: AppStrings.get5000Points,
+          //   onTap: () {},
+          // ),
           _MenuItem(
             title: AppStrings.oneOnOneInquiry,
             onTap: () {},

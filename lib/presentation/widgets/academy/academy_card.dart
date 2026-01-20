@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/academy.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/favorite_provider.dart';
 import '../../screens/academy/academy_detail_screen.dart';
 
 /// A reusable card widget for displaying academy information.
@@ -62,7 +65,7 @@ class AcademyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image
-            _buildImageContainer(height: 120),
+            _buildImageContainer(context, height: 120),
             const SizedBox(height: 10),
             // Name
             Text(
@@ -138,7 +141,7 @@ class AcademyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image
-            _buildImageContainer(height: height ?? 140),
+            _buildImageContainer(context, height: height ?? 140),
             // Content
             Padding(
               padding: const EdgeInsets.all(12),
@@ -232,7 +235,7 @@ class AcademyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image
-            _buildImageContainer(height: height ?? 180),
+            _buildImageContainer(context, height: height ?? 180),
             // Content
             Padding(
               padding: const EdgeInsets.all(16),
@@ -382,6 +385,10 @@ class AcademyCard extends StatelessWidget {
 
   /// Horizontal list tile with image on left
   Widget _buildListTileCard(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final favoriteProvider = context.watch<FavoriteProvider>();
+    final isFavorite = favoriteProvider.isAcademyFavorite(academy.id);
+
     return GestureDetector(
       onTap: () => _handleTap(context),
       child: Container(
@@ -394,20 +401,46 @@ class AcademyCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image on left
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: height ?? 100,
-                height: height ?? 100,
-                child: academy.primaryImageUrl != null
-                    ? Image.network(
-                        academy.primaryImageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
-                      )
-                    : _buildImagePlaceholder(),
-              ),
+            // Image on left with favorite button
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: height ?? 100,
+                    height: height ?? 100,
+                    child: academy.primaryImageUrl != null
+                        ? Image.network(
+                            academy.primaryImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _buildImagePlaceholder(),
+                          )
+                        : _buildImagePlaceholder(),
+                  ),
+                ),
+                if (isLoggedIn)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () =>
+                          favoriteProvider.toggleAcademyFavorite(academy.id),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? AppColors.primary : Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 16),
             // Content on right
@@ -511,7 +544,11 @@ class AcademyCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImageContainer({required double height}) {
+  Widget _buildImageContainer(BuildContext context, {required double height}) {
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final favoriteProvider = context.watch<FavoriteProvider>();
+    final isFavorite = favoriteProvider.isAcademyFavorite(academy.id);
+
     return Stack(
       children: [
         ClipRRect(
@@ -550,6 +587,27 @@ class AcademyCard extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        // Favorite button (only shown when logged in)
+        if (isLoggedIn)
+          Positioned(
+            top: 8,
+            right: academy.isActive ? 8 : 80,
+            child: GestureDetector(
+              onTap: () => favoriteProvider.toggleAcademyFavorite(academy.id),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? AppColors.primary : Colors.white,
+                  size: 18,
                 ),
               ),
             ),

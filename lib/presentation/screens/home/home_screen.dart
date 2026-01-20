@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'widgets/home_header.dart';
 import 'widgets/search_bar_widget.dart';
-import 'widgets/quick_actions.dart';
+import 'widgets/categories.dart';
 import 'widgets/feature_cards_grid.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/nearby_studios_list.dart';
@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // 카테고리
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
-                child: QuickActions(),
+                child: Categories(),
               ),
               SizedBox(height: 24),
               // Feature Grid

@@ -647,14 +647,34 @@ class _AcademyDetailScreenState extends State<AcademyDetailScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                if (danceClass.genre != null)
+                if (danceClass.instructor != null)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        danceClass.instructor!.displayName,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (danceClass.genre != null) ...[
+                  const SizedBox(height: 2),
                   Text(
                     danceClass.genre!,
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
+                      color: AppColors.textHint,
+                      fontSize: 12,
                     ),
                   ),
+                ],
                 const SizedBox(height: 6),
                 Row(
                   children: [

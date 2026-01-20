@@ -11,7 +11,9 @@ import '../../../data/repositories/academy_repository.dart';
 import '../../widgets/academy/academy_card.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final String? initialCategory;
+
+  const SearchScreen({super.key, this.initialCategory});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -28,7 +30,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   String? _errorMessage;
-  String _selectedCategory = AppStrings.categoryAll;
+  late String _selectedCategory;
   Timer? _debounceTimer;
 
   // Distance filter
@@ -55,6 +57,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedCategory = widget.initialCategory ?? AppStrings.categoryAll;
     _searchController.addListener(_onSearchChanged);
     _scrollController.addListener(_onScroll);
     // Load initial data and auto-focus the search field

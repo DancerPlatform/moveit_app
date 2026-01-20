@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/instructor.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/favorite_provider.dart';
 
 /// Display variants for instructor cards
 enum InstructorCardVariant {
@@ -30,22 +33,51 @@ class InstructorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (variant) {
-      InstructorCardVariant.compact => _buildCompactCard(),
-      InstructorCardVariant.standard => _buildStandardCard(),
-      InstructorCardVariant.grid => _buildGridCard(),
+      InstructorCardVariant.compact => _buildCompactCard(context),
+      InstructorCardVariant.standard => _buildStandardCard(context),
+      InstructorCardVariant.grid => _buildGridCard(context),
     };
   }
 
   /// Compact card for horizontal lists
-  Widget _buildCompactCard() {
+  Widget _buildCompactCard(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final favoriteProvider = context.watch<FavoriteProvider>();
+    final isFavorite = favoriteProvider.isInstructorFavorite(instructor.id);
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
         width: width ?? 120,
-        height: height ?? 130,
+        height: height ?? 150,
         child: Column(
           children: [
-            _buildProfileImage(size: 80),
+            Stack(
+              children: [
+                _buildProfileImage(size: 80),
+                if (isLoggedIn)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => favoriteProvider
+                          .toggleInstructorFavorite(instructor.id),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? AppColors.primary : Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             _buildNameRow(fontSize: 13, textAlign: TextAlign.center),
             const SizedBox(height: 4),
@@ -68,7 +100,11 @@ class InstructorCard extends StatelessWidget {
   }
 
   /// Standard list tile card
-  Widget _buildStandardCard() {
+  Widget _buildStandardCard(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final favoriteProvider = context.watch<FavoriteProvider>();
+    final isFavorite = favoriteProvider.isInstructorFavorite(instructor.id);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -125,24 +161,48 @@ class InstructorCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.favorite,
-                  color: AppColors.primary,
-                  size: 18,
+            if (isLoggedIn)
+              GestureDetector(
+                onTap: () =>
+                    favoriteProvider.toggleInstructorFavorite(instructor.id),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${instructor.likeCount}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${instructor.likeCount}',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+              )
+            else
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.favorite,
+                    color: AppColors.primary,
+                    size: 18,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${instructor.likeCount}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -150,7 +210,11 @@ class InstructorCard extends StatelessWidget {
   }
 
   /// Grid card for grid layouts
-  Widget _buildGridCard() {
+  Widget _buildGridCard(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final favoriteProvider = context.watch<FavoriteProvider>();
+    final isFavorite = favoriteProvider.isInstructorFavorite(instructor.id);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -164,7 +228,32 @@ class InstructorCard extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            _buildProfileImage(size: 80),
+            Stack(
+              children: [
+                _buildProfileImage(size: 80),
+                if (isLoggedIn)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => favoriteProvider
+                          .toggleInstructorFavorite(instructor.id),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? AppColors.primary : Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 12),
             Expanded(
               child: Padding(

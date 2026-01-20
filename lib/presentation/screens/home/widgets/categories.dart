@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../search/search_screen.dart';
 
-class QuickActions extends StatelessWidget {
-  const QuickActions({super.key});
+class Categories extends StatelessWidget {
+  const Categories({super.key});
 
   static const List<_CategoryItem> _categories = [
     _CategoryItem(label: AppStrings.categoryAll, icon: Icons.apps),
@@ -31,7 +32,13 @@ class QuickActions extends StatelessWidget {
             icon: category.icon,
             label: category.label,
             onTap: () {
-              // TODO: Navigate to category
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => SearchScreen(
+                    initialCategory: category.label,
+                  ),
+                ),
+              );
             },
           );
         },
