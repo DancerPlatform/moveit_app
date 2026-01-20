@@ -11,6 +11,7 @@ class HomeHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Logo
           Text(
@@ -21,34 +22,34 @@ class HomeHeader extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(width: 12),
+          // const SizedBox(width: 12),
           // Location selector
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                // TODO: Open location selector
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppStrings.defaultLocation,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: AppColors.textPrimary,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Expanded(
+          //   child: GestureDetector(
+          //     onTap: () {
+          //       // TODO: Open location selector
+          //     },
+          //     child: Row(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         Text(
+          //           AppStrings.defaultLocation,
+          //           style: const TextStyle(
+          //             color: AppColors.textPrimary,
+          //             fontSize: 16,
+          //             fontWeight: FontWeight.w500,
+          //           ),
+          //         ),
+          //         const SizedBox(width: 4),
+          //         const Icon(
+          //           Icons.keyboard_arrow_down,
+          //           color: AppColors.textPrimary,
+          //           size: 20,
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
           // Notification icon
           IconButton(
             onPressed: () {

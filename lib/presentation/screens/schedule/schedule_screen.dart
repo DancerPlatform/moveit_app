@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 
-class FavoritesScreen extends StatelessWidget {
-  const FavoritesScreen({super.key});
+class ScheduleScreen extends StatelessWidget {
+  const ScheduleScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.favorites),
+        title: const Text(AppStrings.schedule),
       ),
       body: const Center(
         child: Text(
-          '찜한 목록',
+          '수업 일정',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 16,

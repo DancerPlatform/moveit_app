@@ -5,7 +5,7 @@ import '../../../core/constants/app_strings.dart';
 import '../home/home_screen.dart';
 import '../studios/studios_screen.dart';
 import '../instructors/instructors_screen.dart';
-import '../favorites/favorites_screen.dart';
+import '../schedule/schedule_screen.dart';
 import '../profile/profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -44,7 +44,7 @@ class _MainScreenState extends State<MainScreen> {
     () => const HomeScreen(),
     () => const StudiosScreen(),
     () => const InstructorsScreen(),
-    () => const FavoritesScreen(),
+    () => const ScheduleScreen(),
     () => const ProfileScreen(),
   ];
 
@@ -90,26 +90,31 @@ class _MainScreenState extends State<MainScreen> {
               });
             },
             items: const [
+              // 홈
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_outlined),
                 activeIcon: Icon(Icons.home),
                 label: AppStrings.home,
               ),
+              // 학원 지도
               BottomNavigationBarItem(
                 icon: Icon(Icons.location_on_outlined),
                 activeIcon: Icon(Icons.location_on),
                 label: AppStrings.danceStudios,
               ),
+              // 강사
               BottomNavigationBarItem(
                 icon: Icon(Icons.person_search_outlined),
                 activeIcon: Icon(Icons.person_search),
                 label: AppStrings.instructors,
               ),
+              // 일정
               BottomNavigationBarItem(
-                icon: Icon(Icons.favorite_outline),
-                activeIcon: Icon(Icons.favorite),
-                label: AppStrings.favorites,
+                icon: Icon(Icons.calendar_today_outlined),
+                activeIcon: Icon(Icons.calendar_today),
+                label: AppStrings.schedule,
               ),
+              // 마이베이지
               BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline),
                 activeIcon: Icon(Icons.person),

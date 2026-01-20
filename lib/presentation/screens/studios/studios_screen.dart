@@ -275,7 +275,7 @@ class _StudiosScreenState extends State<StudiosScreen> {
     return Material(
       elevation: 4,
       shape: const CircleBorder(),
-      color: isPrimary ? AppColors.primary : Colors.white,
+      color: isPrimary ? AppColors.primary : Colors.black,
       child: InkWell(
         onTap: onPressed,
         customBorder: const CircleBorder(),
@@ -299,9 +299,6 @@ class _StudiosScreenState extends State<StudiosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.danceStudios),
-      ),
       body: Stack(
         children: [
           FlutterMap(
@@ -356,8 +353,8 @@ class _StudiosScreenState extends State<StudiosScreen> {
           ),
           // Map controls
           Positioned(
-            right: 16,
-            bottom: 100,
+            right: 20,
+            bottom: 20,
             child: Column(
               children: [
                 _buildMapControlButton(

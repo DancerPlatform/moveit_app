@@ -42,7 +42,7 @@ class AppStrings {
   static const String home = '홈';
   static const String danceStudios = '댄스학원';
   static const String instructors = '강사';
-  static const String favorites = '찜';
+  static const String schedule = '일정';
   static const String myPage = '마이페이지';
 
   // Promo
