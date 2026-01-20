@@ -16,6 +16,9 @@ class AcademyCard extends StatelessWidget {
   final double? width;
   final double? height;
 
+  /// Optional distance string to display (e.g., "1.2km")
+  final String? distance;
+
   const AcademyCard({
     super.key,
     required this.academy,
@@ -23,6 +26,7 @@ class AcademyCard extends StatelessWidget {
     this.onTap,
     this.width,
     this.height,
+    this.distance,
   });
 
   @override
@@ -71,8 +75,26 @@ class AcademyCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             const SizedBox(height: 4),
-            // Address
-            if (academy.address != null)
+            // Distance or Address
+            if (distance != null)
+              Row(
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    color: AppColors.textHint,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    distance!,
+                    style: const TextStyle(
+                      color: AppColors.textHint,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              )
+            else if (academy.address != null)
               Text(
                 academy.address!,
                 style: const TextStyle(
@@ -392,16 +414,50 @@ class AcademyCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
-                  // Address
-                  if (academy.address != null) ...[
-                    Text(
-                      academy.address!,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  // Distance and/or Address
+                  if (distance != null || academy.address != null) ...[
+                    Row(
+                      children: [
+                        if (distance != null) ...[
+                          const Icon(
+                            Icons.location_on_outlined,
+                            color: AppColors.textSecondary,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            distance!,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (academy.address != null) ...[
+                            const SizedBox(width: 8),
+                            const Text(
+                              '·',
+                              style: TextStyle(
+                                color: AppColors.textHint,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        ],
+                        if (academy.address != null)
+                          Expanded(
+                            child: Text(
+                              academy.address!,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                   ],

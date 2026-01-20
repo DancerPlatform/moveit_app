@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               HomeHeader(),
+              // 검색 바
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: SearchBarWidget(),
@@ -38,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: QuickActions(),
               ),
               SizedBox(height: 24),
-              // 그리드
+              // Feature Grid
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: FeatureCardsGrid(),

@@ -47,3 +47,4 @@ app.*.map.json
 # Exclude env files
 .env
 .mcp.json
+CLAUDE.md

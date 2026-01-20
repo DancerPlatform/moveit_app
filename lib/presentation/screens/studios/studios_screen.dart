@@ -5,7 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../data/models/academy.dart';
 import '../../../data/repositories/academy_repository.dart';
 import '../../widgets/academy/academy_widgets.dart';
@@ -132,9 +131,41 @@ class _StudiosScreenState extends State<StudiosScreen> {
     return academies;
   }
 
+  String? _getDistanceForAcademy(Academy academy) {
+    if (_currentPosition == null || academy.location?.isValid != true) {
+      return null;
+    }
+
+    final distanceMeters = Geolocator.distanceBetween(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      academy.location!.latitude!,
+      academy.location!.longitude!,
+    );
+
+    final distanceKm = distanceMeters / 1000;
+    if (distanceKm < 1) {
+      return '${distanceMeters.round()}m';
+    }
+    return '${distanceKm.toStringAsFixed(1)}km';
+  }
+
+  Map<String, String> _getDistancesForAcademies(List<Academy> academies) {
+    final distances = <String, String>{};
+    for (final academy in academies) {
+      final distance = _getDistanceForAcademy(academy);
+      if (distance != null) {
+        distances[academy.id] = distance;
+      }
+    }
+    return distances;
+  }
+
   void _showClusterAcademies(List<Marker> markers) {
     final academies = _getAcademiesForMarkers(markers);
     if (academies.isEmpty) return;
+
+    final distances = _getDistancesForAcademies(academies);
 
     showModalBottomSheet(
       context: context,
@@ -169,6 +200,7 @@ class _StudiosScreenState extends State<StudiosScreen> {
                 itemBuilder: (context, index) => AcademyCard(
                   academy: academies[index],
                   variant: AcademyCardVariant.listTile,
+                  distance: distances[academies[index].id],
                   onTap: () {
                     Navigator.pop(context);
                     _showAcademyInfo(academies[index]);
@@ -183,6 +215,9 @@ class _StudiosScreenState extends State<StudiosScreen> {
   }
 
   void _showAcademyInfo(Academy academy) {
+    final distance = _getDistanceForAcademy(academy);
+    final distances = distance != null ? {academy.id: distance} : <String, String>{};
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.background,
@@ -196,6 +231,7 @@ class _StudiosScreenState extends State<StudiosScreen> {
           layout: AcademyListLayout.vertical,
           cardVariant: AcademyCardVariant.listTile,
           padding: const EdgeInsets.symmetric(horizontal: 16),
+          distances: distances,
         ),
       ),
     );

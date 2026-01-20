@@ -8,6 +8,12 @@ class AppStrings {
 
   // Search
   static const String searchHint = '어떤 댄스를 찾고 계신가요?';
+  static const String searchForStudios = '댄스학원을 검색해보세요';
+  static const String searchByNameOrCategory = '학원 이름이나 카테고리로 검색할 수 있어요';
+  static const String noSearchResults = '검색 결과가 없습니다';
+  static const String tryDifferentSearch = '다른 검색어나 카테고리를 선택해보세요';
+  static const String searchError = '검색 중 오류가 발생했습니다';
+  static const String retry = '다시 시도';
 
   // Quick Actions
   static const String trialClass = '체험 수업';

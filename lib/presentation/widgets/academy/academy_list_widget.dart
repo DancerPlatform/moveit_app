@@ -50,6 +50,9 @@ class AcademyListWidget extends StatefulWidget {
   /// Padding around the list
   final EdgeInsets padding;
 
+  /// Optional distances map (academy ID -> formatted distance string)
+  final Map<String, String>? distances;
+
   const AcademyListWidget({
     super.key,
     this.academies,
@@ -64,6 +67,7 @@ class AcademyListWidget extends StatefulWidget {
     this.gridCrossAxisCount = 2,
     this.spacing = 12,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    this.distances,
   });
 
   @override
@@ -230,6 +234,7 @@ class _AcademyListWidgetState extends State<AcademyListWidget> {
                 child: AcademyCard(
                   academy: academy,
                   variant: widget.cardVariant,
+                  distance: widget.distances?[academy.id],
                   onTap: widget.onAcademyTap != null
                       ? () => widget.onAcademyTap!(academy)
                       : null,
@@ -258,6 +263,7 @@ class _AcademyListWidgetState extends State<AcademyListWidget> {
               return AcademyCard(
                 academy: academy,
                 variant: widget.cardVariant,
+                distance: widget.distances?[academy.id],
                 onTap: widget.onAcademyTap != null
                     ? () => widget.onAcademyTap!(academy)
                     : null,
@@ -290,6 +296,7 @@ class _AcademyListWidgetState extends State<AcademyListWidget> {
               return AcademyCard(
                 academy: academy,
                 variant: widget.cardVariant,
+                distance: widget.distances?[academy.id],
                 onTap: widget.onAcademyTap != null
                     ? () => widget.onAcademyTap!(academy)
                     : null,
