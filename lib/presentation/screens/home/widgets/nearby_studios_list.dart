@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../data/models/academy.dart';
 import '../../../../data/repositories/academy_repository.dart';
+import '../../../../providers/location_provider.dart';
 import '../../../widgets/academy/academy_card.dart';
 
 class NearbyStudiosList extends StatefulWidget {
@@ -18,7 +19,8 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
   final AcademyRepository _repository = AcademyRepository();
 
   List<_AcademyWithDistance> _nearbyAcademies = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
+  bool _hasFetched = false;
   String? _error;
 
   static const double _maxDistanceKm = 10.0;
@@ -26,62 +28,60 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
   @override
   void initState() {
     super.initState();
-    _loadNearbyAcademies();
+    // Listen to location changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadNearbyAcademiesIfReady();
+    });
   }
 
-  Future<void> _loadNearbyAcademies() async {
+  void _loadNearbyAcademiesIfReady() {
+    final locationProvider = context.read<LocationProvider>();
+    if (locationProvider.hasLocation && !_hasFetched) {
+      _loadNearbyAcademies(locationProvider);
+    }
+  }
+
+  Future<void> _loadNearbyAcademies(LocationProvider locationProvider) async {
+    final position = locationProvider.currentPosition;
+    if (position == null) {
+      setState(() {
+        _error = '위치 정보를 가져올 수 없습니다';
+        _isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      // Get user's current location
-      final position = await _getCurrentPosition();
-      if (position == null) {
-        if (mounted) {
-          setState(() {
-            _error = '위치 정보를 가져올 수 없습니다';
-            _isLoading = false;
-          });
-        }
-        return;
-      }
+      // Fetch nearby academies (already filtered and sorted by distance)
+      final academies = await _repository.getNearbyAcademies(
+        userLat: position.latitude,
+        userLng: position.longitude,
+        maxDistanceKm: _maxDistanceKm,
+        limit: 20,
+      );
 
-      // Fetch all academies
-      final academies = await _repository.getAcademies(limit: 100);
-
-      // Calculate distance and filter
-      final academiesWithDistance = <_AcademyWithDistance>[];
-
-      for (final academy in academies) {
-        if (academy.location?.isValid == true) {
-          final distanceMeters = Geolocator.distanceBetween(
-            position.latitude,
-            position.longitude,
-            academy.location!.latitude!,
-            academy.location!.longitude!,
-          );
-
-          final distanceKm = distanceMeters / 1000;
-
-          // Only include academies within max distance
-          if (distanceKm <= _maxDistanceKm) {
-            academiesWithDistance.add(_AcademyWithDistance(
-              academy: academy,
-              distanceKm: distanceKm,
-            ));
-          }
-        }
-      }
-
-      // Sort by distance (closest first)
-      academiesWithDistance.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+      // Calculate distance for display purposes
+      final academiesWithDistance = academies.map((academy) {
+        final distanceMeters = locationProvider.distanceTo(
+          academy.location!.latitude!,
+          academy.location!.longitude!,
+        );
+        return _AcademyWithDistance(
+          academy: academy,
+          distanceKm: (distanceMeters ?? 0) / 1000,
+        );
+      }).toList();
 
       if (mounted) {
         setState(() {
           _nearbyAcademies = academiesWithDistance;
           _isLoading = false;
+          _hasFetched = true;
         });
       }
     } catch (e) {
@@ -94,36 +94,16 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
     }
   }
 
-  Future<Position?> _getCurrentPosition() async {
-    try {
-      // Check if location services are enabled
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return null;
-      }
+  Future<void> _retry() async {
+    final locationProvider = context.read<LocationProvider>();
 
-      // Check permission
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return null;
-        }
-      }
+    // If no location, try to get it first
+    if (!locationProvider.hasLocation) {
+      await locationProvider.getCurrentLocation();
+    }
 
-      if (permission == LocationPermission.deniedForever) {
-        return null;
-      }
-
-      // Get current position
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
-    } catch (e) {
-      return null;
+    if (locationProvider.hasLocation) {
+      await _loadNearbyAcademies(locationProvider);
     }
   }
 
@@ -136,28 +116,40 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            AppStrings.nearbyFacilities,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+    return Consumer<LocationProvider>(
+      builder: (context, locationProvider, child) {
+        // Auto-load when location becomes available
+        if (locationProvider.hasLocation && !_hasFetched && !_isLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadNearbyAcademies(locationProvider);
+          });
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                AppStrings.nearbyFacilities,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildContent(),
-      ],
+            const SizedBox(height: 16),
+            _buildContent(locationProvider),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildContent() {
-    if (_isLoading) {
+  Widget _buildContent(LocationProvider locationProvider) {
+    // Show loading while location is being fetched or academies are loading
+    if (locationProvider.isLoading || _isLoading) {
       return const SizedBox(
         height: 200,
         child: Center(
@@ -169,7 +161,9 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
       );
     }
 
-    if (_error != null) {
+    // Show error if location failed or data fetch failed
+    if (_error != null || locationProvider.errorMessage != null) {
+      final errorMsg = _error ?? locationProvider.errorMessage ?? '오류가 발생했습니다';
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Container(
@@ -191,7 +185,7 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _error!,
+                      errorMsg,
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 14,
@@ -199,7 +193,7 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
                     ),
                     const SizedBox(height: 4),
                     GestureDetector(
-                      onTap: _loadNearbyAcademies,
+                      onTap: _retry,
                       child: const Text(
                         '다시 시도',
                         style: TextStyle(
@@ -218,7 +212,8 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
       );
     }
 
-    if (_nearbyAcademies.isEmpty) {
+    // Show empty state if no academies found
+    if (_nearbyAcademies.isEmpty && _hasFetched) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Container(
@@ -249,6 +244,19 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
       );
     }
 
+    // Show waiting for location if not yet available
+    if (!locationProvider.hasLocation && !_hasFetched) {
+      return const SizedBox(
+        height: 200,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 200,
       child: ListView.builder(
@@ -265,9 +273,6 @@ class _NearbyStudiosListState extends State<NearbyStudiosList> {
               academy: item.academy,
               variant: AcademyCardVariant.compact,
               distance: _formatDistance(item.distanceKm),
-              onTap: () {
-                // TODO: Navigate to academy detail screen
-              },
             ),
           );
         },

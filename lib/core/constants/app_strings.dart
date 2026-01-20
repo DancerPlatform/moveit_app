@@ -14,6 +14,12 @@ class AppStrings {
   static const String tryDifferentSearch = '다른 검색어나 카테고리를 선택해보세요';
   static const String searchError = '검색 중 오류가 발생했습니다';
   static const String retry = '다시 시도';
+  static const String distanceFilter = '거리 필터';
+  static const String distanceKm = 'km';
+  static const String noDistanceLimit = '거리 제한 없음';
+  static const String withinDistance = '반경';
+  static const String locationPermissionDenied = '위치 권한이 필요합니다';
+  static const String locationServiceDisabled = '위치 서비스를 활성화해주세요';
 
   // Quick Actions
   static const String trialClass = '체험 수업';

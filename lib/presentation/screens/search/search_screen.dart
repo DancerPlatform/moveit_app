@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' show asin, cos, sin, sqrt, pi;
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
@@ -29,7 +31,15 @@ class _SearchScreenState extends State<SearchScreen> {
   String _selectedCategory = AppStrings.categoryAll;
   Timer? _debounceTimer;
 
+  // Distance filter
+  bool _distanceFilterEnabled = false;
+  double _maxDistanceKm = 10.0;
+  Position? _userPosition;
+  bool _isLoadingLocation = false;
+
   static const int _pageSize = 20;
+  static const double _minDistance = 1.0;
+  static const double _maxDistance = 50.0;
 
   final List<String> _categories = [
     AppStrings.categoryAll,
@@ -169,6 +179,21 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     }
 
+    // Apply distance filter if enabled
+    if (_distanceFilterEnabled && _userPosition != null) {
+      results = results.where((academy) {
+        final location = academy.location;
+        if (location == null || !location.isValid) return false;
+        final distance = _calculateDistanceKm(
+          _userPosition!.latitude,
+          _userPosition!.longitude,
+          location.latitude!,
+          location.longitude!,
+        );
+        return distance <= _maxDistanceKm;
+      }).toList();
+    }
+
     return results;
   }
 
@@ -178,6 +203,109 @@ class _SearchScreenState extends State<SearchScreen> {
     });
     _performSearch();
   }
+
+  Future<void> _enableDistanceFilter() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text(AppStrings.locationServiceDisabled)),
+          );
+          setState(() {
+            _isLoadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(AppStrings.locationPermissionDenied)),
+            );
+            setState(() {
+              _isLoadingLocation = false;
+            });
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text(AppStrings.locationPermissionDenied)),
+          );
+          setState(() {
+            _isLoadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      if (mounted) {
+        setState(() {
+          _userPosition = position;
+          _distanceFilterEnabled = true;
+          _isLoadingLocation = false;
+        });
+        _performSearch();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
+  void _disableDistanceFilter() {
+    setState(() {
+      _distanceFilterEnabled = false;
+    });
+    _performSearch();
+  }
+
+  void _onDistanceChanged(double value) {
+    setState(() {
+      _maxDistanceKm = value;
+    });
+  }
+
+  void _onDistanceChangeEnd(double value) {
+    _performSearch();
+  }
+
+  /// Calculate distance between two coordinates using Haversine formula
+  double _calculateDistanceKm(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371; // km
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_toRadians(lat1)) *
+            cos(_toRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    final c = 2 * asin(sqrt(a));
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) => degrees * pi / 180;
 
   void _clearSearch() {
     _searchController.clear();
@@ -206,6 +334,8 @@ class _SearchScreenState extends State<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildCategoryFilter(),
+            const SizedBox(height: 8),
+            _buildDistanceFilter(),
             const SizedBox(height: 8),
             Expanded(child: _buildBody()),
           ],
@@ -297,6 +427,117 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildDistanceFilter() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    color: _distanceFilterEnabled
+                        ? AppColors.primary
+                        : AppColors.textHint,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppStrings.distanceFilter,
+                    style: TextStyle(
+                      color: _distanceFilterEnabled
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              if (_isLoadingLocation)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                )
+              else
+                Switch(
+                  value: _distanceFilterEnabled,
+                  onChanged: (value) {
+                    if (value) {
+                      _enableDistanceFilter();
+                    } else {
+                      _disableDistanceFilter();
+                    }
+                  },
+                  activeTrackColor: AppColors.primary,
+                  activeThumbColor: AppColors.textPrimary,
+                ),
+            ],
+          ),
+          if (_distanceFilterEnabled) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: AppColors.primary,
+                      inactiveTrackColor: AppColors.border,
+                      thumbColor: AppColors.primary,
+                      overlayColor: AppColors.primary.withValues(alpha: 0.2),
+                      trackHeight: 4,
+                    ),
+                    child: Slider(
+                      value: _maxDistanceKm,
+                      min: _minDistance,
+                      max: _maxDistance,
+                      divisions: 49,
+                      onChanged: _onDistanceChanged,
+                      onChangeEnd: _onDistanceChangeEnd,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${_maxDistanceKm.round()} ${AppStrings.distanceKm}',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -409,9 +650,6 @@ class _SearchScreenState extends State<SearchScreen> {
         return AcademyCard(
           academy: academy,
           variant: AcademyCardVariant.listTile,
-          onTap: () {
-            // TODO: Navigate to academy detail screen
-          },
         );
       },
     );

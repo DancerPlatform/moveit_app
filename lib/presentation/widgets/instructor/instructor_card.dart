@@ -42,34 +42,25 @@ class InstructorCard extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: width ?? 120,
+        height: height ?? 130,
         child: Column(
           children: [
             _buildProfileImage(size: 80),
             const SizedBox(height: 8),
+            _buildNameRow(fontSize: 13, textAlign: TextAlign.center),
+            const SizedBox(height: 4),
             Text(
-              instructor.displayName,
+              instructor.specialtyList.isNotEmpty
+                  ? instructor.specialtyList.first
+                  : '',
               style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                fontSize: 11,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
-            if (instructor.specialtyList.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                instructor.specialtyList.first,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ],
           ],
         ),
       ),
@@ -81,6 +72,7 @@ class InstructorCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: height ?? 88,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -93,61 +85,48 @@ class InstructorCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    instructor.displayName,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (instructor.specialtyList.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: instructor.specialtyList.take(3).map((specialty) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            specialty,
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                  _buildNameRow(fontSize: 15),
+                  const SizedBox(height: 4),
+                  if (instructor.specialtyList.isNotEmpty)
+                    SizedBox(
+                      height: 20,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: instructor.specialtyList.take(3).length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder: (context, index) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                  if (instructor.bio != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      instructor.bio!,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              instructor.specialtyList[index],
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    )
+                  else
+                    const SizedBox(height: 20),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(
                   Icons.favorite,
@@ -176,6 +155,7 @@ class InstructorCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: width,
+        height: height ?? 190,
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
@@ -186,25 +166,17 @@ class InstructorCard extends StatelessWidget {
             const SizedBox(height: 16),
             _buildProfileImage(size: 80),
             const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                children: [
-                  Text(
-                    instructor.displayName,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (instructor.specialtyList.isNotEmpty) ...[
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  children: [
+                    _buildNameRow(fontSize: 14, textAlign: TextAlign.center),
                     const SizedBox(height: 6),
                     Text(
-                      instructor.specialtyList.take(2).join(', '),
+                      instructor.specialtyList.isNotEmpty
+                          ? instructor.specialtyList.take(2).join(', ')
+                          : '',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -213,33 +185,76 @@ class InstructorCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.favorite,
-                        color: AppColors.primary,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${instructor.likeCount}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.favorite,
+                          color: AppColors.primary,
+                          size: 14,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 4),
+                        Text(
+                          '${instructor.likeCount}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 12),
           ],
         ),
       ),
+    );
+  }
+
+  /// Builds the name row with Korean name and optional English name
+  Widget _buildNameRow({
+    required double fontSize,
+    TextAlign textAlign = TextAlign.start,
+  }) {
+    final hasEnglishName = instructor.nameEn != null && instructor.nameEn!.isNotEmpty;
+
+    return Row(
+      mainAxisSize: textAlign == TextAlign.center ? MainAxisSize.min : MainAxisSize.max,
+      mainAxisAlignment: textAlign == TextAlign.center
+          ? MainAxisAlignment.center
+          : MainAxisAlignment.start,
+      children: [
+        Flexible(
+          child: Text(
+            instructor.displayName,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: textAlign,
+          ),
+        ),
+        if (hasEnglishName && instructor.nameKr != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            instructor.nameEn!,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: fontSize - 2,
+              fontWeight: FontWeight.w400,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
     );
   }
 

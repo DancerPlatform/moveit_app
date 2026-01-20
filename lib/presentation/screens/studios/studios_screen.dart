@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/academy.dart';
 import '../../../data/repositories/academy_repository.dart';
+import '../../../providers/location_provider.dart';
 import '../../widgets/academy/academy_widgets.dart';
+import '../academy/academy_detail_screen.dart';
 
 class StudiosScreen extends StatefulWidget {
   const StudiosScreen({super.key});
@@ -21,12 +23,11 @@ class _StudiosScreenState extends State<StudiosScreen>
   final MapController _mapController = MapController();
   final AcademyRepository _academyRepository = AcademyRepository();
 
-  static final LatLng _defaultPosition = LatLng(37.5665, 126.9780); // Seoul, South Korea
+  static final LatLng _defaultPosition = LatLng(37.5665, 126.9780); // Seoul
 
-  Position? _currentPosition;
-  bool _isLoading = true;
   bool _isFetchingAcademies = false;
-  String? _errorMessage;
+  bool _isMapReady = false;
+  bool _hasMovedToUserLocation = false;
   List<Academy> _academies = [];
 
   late final AnimationController _pulseController;
@@ -42,7 +43,6 @@ class _StudiosScreenState extends State<StudiosScreen>
     _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-    _getCurrentLocation();
   }
 
   @override
@@ -51,8 +51,29 @@ class _StudiosScreenState extends State<StudiosScreen>
     super.dispose();
   }
 
+  void _onMapReady() {
+    _isMapReady = true;
+    _tryMoveToUserLocation();
+    _fetchAcademiesInBounds();
+  }
+
+  void _tryMoveToUserLocation() {
+    if (_hasMovedToUserLocation) return;
+
+    final locationProvider = context.read<LocationProvider>();
+    final position = locationProvider.currentPosition;
+
+    if (position != null) {
+      _hasMovedToUserLocation = true;
+      _mapController.move(
+        LatLng(position.latitude, position.longitude),
+        17.0,
+      );
+    }
+  }
+
   Future<void> _fetchAcademiesInBounds() async {
-    if (_isFetchingAcademies) return;
+    if (_isFetchingAcademies || !_isMapReady) return;
 
     final bounds = _mapController.camera.visibleBounds;
 
@@ -85,10 +106,12 @@ class _StudiosScreenState extends State<StudiosScreen>
     }
   }
 
-  Marker? get _currentLocationMarker {
-    if (_currentPosition == null) return null;
+  Marker? _buildCurrentLocationMarker(LocationProvider locationProvider) {
+    final position = locationProvider.currentPosition;
+    if (position == null) return null;
+
     return Marker(
-      point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+      point: LatLng(position.latitude, position.longitude),
       width: 40,
       height: 40,
       child: AnimatedBuilder(
@@ -154,29 +177,22 @@ class _StudiosScreenState extends State<StudiosScreen>
     return academies;
   }
 
-  String? _getDistanceForAcademy(Academy academy) {
-    if (_currentPosition == null || academy.location?.isValid != true) {
+  String? _getDistanceForAcademy(
+      Academy academy, LocationProvider locationProvider) {
+    if (!locationProvider.hasLocation || academy.location?.isValid != true) {
       return null;
     }
-
-    final distanceMeters = Geolocator.distanceBetween(
-      _currentPosition!.latitude,
-      _currentPosition!.longitude,
+    return locationProvider.formatDistanceTo(
       academy.location!.latitude!,
       academy.location!.longitude!,
     );
-
-    final distanceKm = distanceMeters / 1000;
-    if (distanceKm < 1) {
-      return '${distanceMeters.round()}m';
-    }
-    return '${distanceKm.toStringAsFixed(1)}km';
   }
 
-  Map<String, String> _getDistancesForAcademies(List<Academy> academies) {
+  Map<String, String> _getDistancesForAcademies(
+      List<Academy> academies, LocationProvider locationProvider) {
     final distances = <String, String>{};
     for (final academy in academies) {
-      final distance = _getDistanceForAcademy(academy);
+      final distance = _getDistanceForAcademy(academy, locationProvider);
       if (distance != null) {
         distances[academy.id] = distance;
       }
@@ -188,7 +204,8 @@ class _StudiosScreenState extends State<StudiosScreen>
     final academies = _getAcademiesForMarkers(markers);
     if (academies.isEmpty) return;
 
-    final distances = _getDistancesForAcademies(academies);
+    final locationProvider = context.read<LocationProvider>();
+    final distances = _getDistancesForAcademies(academies, locationProvider);
 
     showModalBottomSheet(
       context: context,
@@ -238,90 +255,25 @@ class _StudiosScreenState extends State<StudiosScreen>
   }
 
   void _showAcademyInfo(Academy academy) {
-    final distance = _getDistanceForAcademy(academy);
-    final distances = distance != null ? {academy.id: distance} : <String, String>{};
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
-        child: AcademyListWidget(
-          academies: [academy],
-          layout: AcademyListLayout.vertical,
-          cardVariant: AcademyCardVariant.listTile,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          distances: distances,
-        ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AcademyDetailScreen(academyId: academy.id),
       ),
     );
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _goToCurrentLocation() async {
+    final locationProvider = context.read<LocationProvider>();
 
-    try {
-      // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() {
-          _errorMessage = '위치 서비스가 비활성화되어 있습니다.';
-          _isLoading = false;
-        });
-        return;
-      }
+    // Refresh location if needed
+    final position = await locationProvider.getCurrentLocation(forceRefresh: true);
 
-      // Check location permissions
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() {
-            _errorMessage = '위치 권한이 거부되었습니다.';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _errorMessage = '위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 활성화해주세요.';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // Get current position
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
+    if (position != null && _isMapReady) {
+      _mapController.move(
+        LatLng(position.latitude, position.longitude),
+        17.0,
       );
-
-      final currentLatLng = LatLng(position.latitude, position.longitude);
-
-      setState(() {
-        _currentPosition = position;
-        _isLoading = false;
-      });
-
-      // Move map to current position
-      _mapController.move(currentLatLng, 17.0);
-
-      // Fetch academies in the new visible area
-      _fetchAcademiesInBounds();
-    } catch (e) {
-      setState(() {
-        _errorMessage = '위치를 가져오는 중 오류가 발생했습니다: $e';
-        _isLoading = false;
-      });
     }
   }
 
@@ -357,137 +309,155 @@ class _StudiosScreenState extends State<StudiosScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _defaultPosition,
-              initialZoom: 17.0,
-              onMapEvent: _onMapEvent,
-            ),
+    return Consumer<LocationProvider>(
+      builder: (context, locationProvider, child) {
+        // Try to move to user location once loaded
+        if (locationProvider.hasLocation && !_hasMovedToUserLocation && _isMapReady) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _tryMoveToUserLocation();
+          });
+        }
+
+        final currentLocationMarker = _buildCurrentLocationMarker(locationProvider);
+
+        return Scaffold(
+          body: Stack(
             children: [
-              TileLayer(
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-              ),
-              MarkerClusterLayerWidget(
-                options: MarkerClusterLayerOptions(
-                  maxClusterRadius: 80,
-                  disableClusteringAtZoom: 18,
-                  size: const Size(50, 50),
-                  markers: _academyMarkers,
-                  builder: (context, markers) => GestureDetector(
-                    onTap: () => _showClusterAcademies(markers),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 6,
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _defaultPosition,
+                  initialZoom: 17.0,
+                  onMapEvent: _onMapEvent,
+                  onMapReady: _onMapReady,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                    subdomains: const ['a', 'b', 'c', 'd'],
+                  ),
+                  MarkerClusterLayerWidget(
+                    options: MarkerClusterLayerOptions(
+                      maxClusterRadius: 80,
+                      disableClusteringAtZoom: 18,
+                      size: const Size(50, 50),
+                      markers: _academyMarkers,
+                      builder: (context, markers) => GestureDetector(
+                        onTap: () => _showClusterAcademies(markers),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 6,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${markers.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          child: Center(
+                            child: Text(
+                              '${markers.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
+                  if (currentLocationMarker != null)
+                    MarkerLayer(markers: [currentLocationMarker]),
+                ],
+              ),
+              // Map controls
+              Positioned(
+                right: 20,
+                bottom: 20,
+                child: Column(
+                  children: [
+                    _buildMapControlButton(
+                      icon: Icons.add,
+                      onPressed: () {
+                        final currentZoom = _mapController.camera.zoom;
+                        _mapController.move(
+                          _mapController.camera.center,
+                          currentZoom + 1,
+                        );
+                      },
+                      tooltip: '확대',
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMapControlButton(
+                      icon: Icons.remove,
+                      onPressed: () {
+                        final currentZoom = _mapController.camera.zoom;
+                        _mapController.move(
+                          _mapController.camera.center,
+                          currentZoom - 1,
+                        );
+                      },
+                      tooltip: '축소',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMapControlButton(
+                      icon: Icons.my_location,
+                      onPressed: _goToCurrentLocation,
+                      tooltip: '현재 위치로 이동',
+                      isPrimary: true,
+                    ),
+                  ],
                 ),
               ),
-              if (_currentLocationMarker != null)
-                MarkerLayer(markers: [_currentLocationMarker!]),
-            ],
-          ),
-          // Map controls
-          Positioned(
-            right: 20,
-            bottom: 20,
-            child: Column(
-              children: [
-                _buildMapControlButton(
-                  icon: Icons.add,
-                  onPressed: () {
-                    final currentZoom = _mapController.camera.zoom;
-                    _mapController.move(
-                      _mapController.camera.center,
-                      currentZoom + 1,
-                    );
-                  },
-                  tooltip: '확대',
-                ),
-                const SizedBox(height: 8),
-                _buildMapControlButton(
-                  icon: Icons.remove,
-                  onPressed: () {
-                    final currentZoom = _mapController.camera.zoom;
-                    _mapController.move(
-                      _mapController.camera.center,
-                      currentZoom - 1,
-                    );
-                  },
-                  tooltip: '축소',
-                ),
-                const SizedBox(height: 16),
-                _buildMapControlButton(
-                  icon: Icons.my_location,
-                  onPressed: _getCurrentLocation,
-                  tooltip: '현재 위치로 이동',
-                  isPrimary: true,
-                ),
-              ],
-            ),
-          ),
-          if (_isLoading)
-            const Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-            ),
-          if (_errorMessage != null)
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: Card(
-                color: AppColors.error,
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        onPressed: _getCurrentLocation,
-                      ),
-                    ],
+              // Loading indicator only during initial location fetch
+              if (locationProvider.isLoading &&
+                  locationProvider.status == LocationStatus.loading)
+                const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
+              // Error message
+              if (locationProvider.errorMessage != null)
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: Card(
+                    color: AppColors.error,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              locationProvider.errorMessage!,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.refresh, color: Colors.white),
+                            onPressed: _goToCurrentLocation,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

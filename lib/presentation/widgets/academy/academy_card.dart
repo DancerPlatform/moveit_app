@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/academy.dart';
+import '../../screens/academy/academy_detail_screen.dart';
 
 /// A reusable card widget for displaying academy information.
 ///
@@ -32,17 +33,29 @@ class AcademyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (variant) {
-      AcademyCardVariant.compact => _buildCompactCard(),
-      AcademyCardVariant.standard => _buildStandardCard(),
-      AcademyCardVariant.detailed => _buildDetailedCard(),
-      AcademyCardVariant.listTile => _buildListTileCard(),
+      AcademyCardVariant.compact => _buildCompactCard(context),
+      AcademyCardVariant.standard => _buildStandardCard(context),
+      AcademyCardVariant.detailed => _buildDetailedCard(context),
+      AcademyCardVariant.listTile => _buildListTileCard(context),
     };
   }
 
+  void _handleTap(BuildContext context) {
+    if (onTap != null) {
+      onTap!();
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => AcademyDetailScreen(academyId: academy.id),
+        ),
+      );
+    }
+  }
+
   /// Compact horizontal card for horizontal scroll lists
-  Widget _buildCompactCard() {
+  Widget _buildCompactCard(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       child: SizedBox(
         width: width ?? 160,
         child: Column(
@@ -111,9 +124,9 @@ class AcademyCard extends StatelessWidget {
   }
 
   /// Standard vertical card for grid displays
-  Widget _buildStandardCard() {
+  Widget _buildStandardCard(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       child: Container(
         width: width,
         decoration: BoxDecoration(
@@ -205,9 +218,9 @@ class AcademyCard extends StatelessWidget {
   }
 
   /// Detailed card with social links and full information
-  Widget _buildDetailedCard() {
+  Widget _buildDetailedCard(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       child: Container(
         width: width,
         decoration: BoxDecoration(
@@ -368,9 +381,9 @@ class AcademyCard extends StatelessWidget {
   }
 
   /// Horizontal list tile with image on left
-  Widget _buildListTileCard() {
+  Widget _buildListTileCard(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       child: Container(
         width: width,
         padding: const EdgeInsets.all(12),
