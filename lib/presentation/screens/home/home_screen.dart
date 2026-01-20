@@ -4,7 +4,6 @@ import 'widgets/home_header.dart';
 import 'widgets/search_bar_widget.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/feature_cards_grid.dart';
-import 'widgets/benefits_row.dart';
 import 'widgets/promo_banner.dart';
 import 'widgets/nearby_studios_list.dart';
 
@@ -32,19 +31,16 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 16),
               PromoBanner(),
               SizedBox(height: 24),
-              SizedBox(height: 20),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: QuickActions(),
               ),
               SizedBox(height: 24),
+              // 그리드
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: FeatureCardsGrid(),
               ),
-              SizedBox(height: 24),
-              BenefitsRow(),
-
               SizedBox(height: 24),
               // 주변 댄스 학원
               NearbyStudiosList(),

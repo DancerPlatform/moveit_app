@@ -1,3 +1,4 @@
+import 'package:dancer_app/presentation/screens/studios/studios_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -16,7 +17,6 @@ class FeatureCardsGrid extends StatelessWidget {
               flex: 3,
               child: _FeatureCard(
                 title: AppStrings.nearbyStudios,
-                badge: AppStrings.lowestPriceDiscount,
                 height: 200,
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -25,7 +25,10 @@ class FeatureCardsGrid extends StatelessWidget {
                 ),
                 icon: Icons.location_on,
                 onTap: () {
-                  // TODO: Navigate to nearby studios
+                  // 지도로 이동
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const StudiosScreen()),
+                  );
                 },
               ),
             ),
@@ -34,21 +37,29 @@ class FeatureCardsGrid extends StatelessWidget {
               flex: 2,
               child: Column(
                 children: [
+                  // 지도에서 찾기
                   _FeatureCard(
                     title: AppStrings.findOnMap,
                     height: 94,
                     icon: Icons.map_outlined,
                     onTap: () {
-                      // TODO: Navigate to map
+                      // 지도로 이동
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const StudiosScreen()),
+                      );
                     },
                   ),
                   const SizedBox(height: 12),
+                  // 댄서 찾기
                   _FeatureCard(
-                    title: AppStrings.priceComparison,
+                    title: AppStrings.findDancers,
                     height: 94,
-                    icon: Icons.compare_arrows,
+                    icon: Icons.search,
                     onTap: () {
-                      // TODO: Navigate to price comparison
+                      // 댄서 화면으로 이동
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const StudiosScreen()),
+                      );
                     },
                   ),
                 ],
@@ -129,11 +140,11 @@ class _FeatureCard extends StatelessWidget {
             const Spacer(
             ),
             Align(
-              alignment: Alignment.bottomRight,
+              alignment: Alignment.bottomLeft,
               child: Icon(
                 icon,
                 color: AppColors.primary.withValues(alpha: 0.7),
-                size: 40,
+                size: 30,
               ),
             ),
           ],

@@ -17,7 +17,7 @@ class AppStrings {
   static const String nearbyStudios = '내 주변 댄스학원';
   static const String lowestPriceDiscount = '최저가 할인';
   static const String findOnMap = '지도에서 찾기';
-  static const String priceComparison = '수강료 비교';
+  static const String findDancers = '댄서 찾기';
 
   // Benefits
   static const String lowestPriceGuarantee = '최저가 보장';
