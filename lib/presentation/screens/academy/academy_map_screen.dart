@@ -14,14 +14,14 @@ import '../../../providers/location_provider.dart';
 import '../../widgets/academy/academy_widgets.dart';
 import '../academy/academy_detail_screen.dart';
 
-class StudiosScreen extends StatefulWidget {
-  const StudiosScreen({super.key});
+class AcademyMapScreen extends StatefulWidget {
+  const AcademyMapScreen({super.key});
 
   @override
-  State<StudiosScreen> createState() => _StudiosScreenState();
+  State<AcademyMapScreen> createState() => _AcademyMapScreenState();
 }
 
-class _StudiosScreenState extends State<StudiosScreen>
+class _AcademyMapScreenState extends State<AcademyMapScreen>
     with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final AcademyRepository _academyRepository = AcademyRepository();

@@ -8,14 +8,14 @@ import '../../../../data/repositories/academy_repository.dart';
 import '../../../../providers/location_provider.dart';
 import '../../../widgets/academy/academy_card.dart';
 
-class NearbyStudiosList extends StatefulWidget {
-  const NearbyStudiosList({super.key});
+class NearbyAcademiesList extends StatefulWidget {
+  const NearbyAcademiesList({super.key});
 
   @override
-  State<NearbyStudiosList> createState() => _NearbyStudiosListState();
+  State<NearbyAcademiesList> createState() => _NearbyAcademiesListState();
 }
 
-class _NearbyStudiosListState extends State<NearbyStudiosList> {
+class _NearbyAcademiesListState extends State<NearbyAcademiesList> {
   final AcademyRepository _repository = AcademyRepository();
 
   List<_AcademyWithDistance> _nearbyAcademies = [];

@@ -8,6 +8,7 @@ class Categories extends StatelessWidget {
   const Categories({super.key});
 
   static const List<_CategoryItem> _categories = [
+    // Todo: link this with the categories table later on with image icons
     _CategoryItem(label: AppStrings.categoryAll, icon: Icons.apps),
     _CategoryItem(label: AppStrings.categoryKpop, icon: Icons.music_note),
     _CategoryItem(label: AppStrings.categoryHiphop, icon: Icons.headphones),

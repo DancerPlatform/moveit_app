@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../home/home_screen.dart';
-import '../studios/studios_screen.dart';
+import '../academy/academy_map_screen.dart';
 import '../instructors/instructors_screen.dart';
 import '../schedule/schedule_screen.dart';
 import '../profile/profile_screen.dart';
@@ -42,7 +42,7 @@ class _MainScreenState extends State<MainScreen> {
   // Root screens for each tab
   final List<Widget Function()> _screenBuilders = [
     () => const HomeScreen(),
-    () => const StudiosScreen(),
+    () => const AcademyMapScreen(),
     () => const InstructorsScreen(),
     () => const ScheduleScreen(),
     () => const ProfileScreen(),
