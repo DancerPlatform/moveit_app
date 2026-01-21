@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
@@ -29,6 +32,9 @@ class _StudiosScreenState extends State<StudiosScreen>
   bool _isMapReady = false;
   bool _hasMovedToUserLocation = false;
   List<Academy> _academies = [];
+  final Set<String> _selectedTags = {};
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
 
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
@@ -48,6 +54,7 @@ class _StudiosScreenState extends State<StudiosScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -130,7 +137,7 @@ class _StudiosScreenState extends State<StudiosScreen>
 
   List<Marker> get _academyMarkers {
     final markers = <Marker>[];
-    for (final academy in _academies) {
+    for (final academy in _filteredAcademies) {
       if (academy.location != null && academy.location!.isValid) {
         markers.add(
           Marker(
@@ -175,6 +182,72 @@ class _StudiosScreenState extends State<StudiosScreen>
       }
     }
     return academies;
+  }
+
+  /// Get all unique tags from loaded academies
+  Set<String> get _availableTags {
+    final tags = <String>{};
+    for (final academy in _academies) {
+      tags.addAll(academy.tagList);
+    }
+    return tags;
+  }
+
+  /// Get academies filtered by selected tags
+  List<Academy> get _filteredAcademies {
+    if (_selectedTags.isEmpty) return _academies;
+    return _academies.where((academy) {
+      final academyTags = academy.tagList;
+      return _selectedTags.any((tag) => academyTags.contains(tag));
+    }).toList();
+  }
+
+  /// Search address using Nominatim and move map to location
+  Future<void> _searchAddress(String query) async {
+    if (query.trim().isEmpty) return;
+
+    setState(() => _isSearching = true);
+
+    try {
+      final encodedQuery = Uri.encodeComponent(query);
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=1&countrycodes=kr',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'DancerApp/1.0'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> results = jsonDecode(response.body);
+        if (results.isNotEmpty) {
+          final lat = double.parse(results[0]['lat']);
+          final lon = double.parse(results[0]['lon']);
+
+          if (_isMapReady) {
+            _mapController.move(LatLng(lat, lon), 15.0);
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('주소를 찾을 수 없습니다')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error searching address: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('검색 중 오류가 발생했습니다')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSearching = false);
+      }
+    }
   }
 
   String? _getDistanceForAcademy(
@@ -254,6 +327,113 @@ class _StudiosScreenState extends State<StudiosScreen>
     );
   }
 
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final availableTags = _availableTags.toList()..sort();
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '태그 필터',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _selectedTags.clear();
+                        });
+                        setState(() {});
+                      },
+                      child: const Text('초기화'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (availableTags.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        '현재 지역에 태그가 없습니다',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: availableTags.map((tag) {
+                      final isSelected = _selectedTags.contains(tag);
+                      return FilterChip(
+                        label: Text(tag),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setModalState(() {
+                            if (selected) {
+                              _selectedTags.add(tag);
+                            } else {
+                              _selectedTags.remove(tag);
+                            }
+                          });
+                          setState(() {});
+                        },
+                        selectedColor: AppColors.primary.withValues(alpha: 0.3),
+                        checkmarkColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.textPrimary,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      _selectedTags.isEmpty
+                          ? '전체 보기'
+                          : '${_filteredAcademies.length}개 학원 보기',
+                    ),
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).padding.bottom),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showAcademyInfo(Academy academy) {
     Navigator.push(
       context,
@@ -275,6 +455,107 @@ class _StudiosScreenState extends State<StudiosScreen>
         17.0,
       );
     }
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                onSubmitted: _searchAddress,
+                decoration: InputDecoration(
+                  hintText: '주소 검색 (예: 강남역, 홍대입구)',
+                  hintStyle: const TextStyle(color: AppColors.textSecondary),
+                  prefixIcon: _isSearching
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : const Icon(Icons.search, color: AppColors.textSecondary),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Stack(
+              children: [
+                Material(
+                  elevation: 2,
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.surface,
+                  child: InkWell(
+                    onTap: _showFilterBottomSheet,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.filter_list,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_selectedTags.isNotEmpty)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        '${_selectedTags.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMapControlButton({
@@ -454,6 +735,13 @@ class _StudiosScreenState extends State<StudiosScreen>
                     ),
                   ),
                 ),
+              // Search bar at top
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildSearchBar(),
+              ),
             ],
           ),
         );
